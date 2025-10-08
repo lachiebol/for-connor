@@ -90,7 +90,7 @@ async function loadStation() {
     document.getElementById('stationName').textContent = station.name;
     document.getElementById('stationHome').innerHTML = `<a href="${station.homepage}" target="_blank">${station.homepage}</a>`;
 
-    const streamURL = station.url_resolved;
+    const streamURL = station.url_resolved.replace(/^http:\/\//, 'https://');;
 
     if (Hls.isSupported()) {
       const hls = new Hls();
