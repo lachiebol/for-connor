@@ -65,11 +65,12 @@
   <div id="controls">
     <button id="playBtn">Play</button>
     <button id="pauseBtn">Pause</button>
+    <button id="liveBtn">Go Live</button>
     Volume: <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8">
   </div>
 </div>
 
-<video id="radioPlayer" style="display:none;"></video>
+<video id="radioPlayer" style="display:none;" controls></video>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
@@ -77,7 +78,10 @@ const API_URL = 'https://de2.api.radio-browser.info/json/stations/byuuid/b26aee1
 const video = document.getElementById('radioPlayer');
 const playBtn = document.getElementById('playBtn');
 const pauseBtn = document.getElementById('pauseBtn');
+const liveBtn = document.getElementById('liveBtn');
 const volumeSlider = document.getElementById('volumeSlider');
+
+let hls;
 
 async function loadStation() {
   try {
@@ -90,19 +94,25 @@ async function loadStation() {
     document.getElementById('stationName').textContent = station.name;
     document.getElementById('stationHome').innerHTML = `<a href="${station.homepage}" target="_blank">${station.homepage}</a>`;
 
-    const streamURL = station.url_resolved.replace(/^http:\/\//, 'https://');;
+    // Replace http with https
+    const streamURL = station.url_resolved.replace(/^http:\/\//, 'https://');
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      hls = new Hls();
       hls.loadSource(streamURL);
       hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(err => console.log('Auto play failed:', err));
+      });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamURL;
+      video.play();
     } else {
       alert('Your browser does not support HLS playback.');
     }
 
-    // Set initial volume
+    // Initial volume
     video.volume = parseFloat(volumeSlider.value);
 
   } catch (err) {
@@ -111,6 +121,7 @@ async function loadStation() {
   }
 }
 
+// Controls
 playBtn.addEventListener('click', () => {
   video.play().catch(err => console.log('Play failed:', err));
 });
@@ -121,6 +132,16 @@ pauseBtn.addEventListener('click', () => {
 
 volumeSlider.addEventListener('input', () => {
   video.volume = parseFloat(volumeSlider.value);
+});
+
+// Go Live button
+liveBtn.addEventListener('click', () => {
+  if (hls && hls.liveSyncPosition !== undefined) {
+    video.currentTime = hls.liveSyncPosition;
+    video.play();
+  } else {
+    console.log('Live position not available.');
+  }
 });
 
 loadStation();
